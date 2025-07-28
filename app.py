@@ -8,12 +8,9 @@ from sentence_transformers import SentenceTransformer
 import PyPDF2
 from sklearn.metrics.pairwise import cosine_similarity
 
-INPUT_DIR = "/app/input"
-OUTPUT_DIR = "/app/output"
-
-# Get persona and job from environment variables
-PERSONA = os.getenv("PERSONA", "Default Persona")
-JOB = os.getenv("JOB", "Default Job")
+INPUT_JSON = "/app/input/input.json"
+PDF_DIR = "/app/input"
+OUTPUT_JSON = "/app/output/analysis_results.json"
 
 class DocumentAnalyst:
     def __init__(self):
@@ -106,15 +103,22 @@ class DocumentAnalyst:
 
         return '. '.join(refined) + '.' if refined else cleaned[:max_length]
 
-    def process_documents(self, input_dir: str, persona: str, job_to_be_done: str) -> Dict[str, Any]:
-        print(f"Processing documents in {input_dir}...")
+    def process_documents_from_json(self, input_json_path: str) -> Dict[str, Any]:
+        with open(input_json_path, 'r', encoding='utf-8') as f:
+            input_data = json.load(f)
+
+        persona = input_data["persona"]["role"]
+        job_to_be_done = input_data["job_to_be_done"]["task"]
+        documents = input_data["documents"]
+        document_filenames = [doc["filename"] for doc in documents]
+
         query_context = f"{persona}: {job_to_be_done}"
         all_sections = []
 
-        for filename in os.listdir(input_dir):
-            if not filename.lower().endswith(".pdf"):
-                continue
-            file_path = os.path.join(input_dir, filename)
+        for doc in documents:
+            filename = doc["filename"]
+            file_path = os.path.join(PDF_DIR, filename)
+
             print(f"Processing: {filename}")
             page_texts = self.extract_text_from_pdf(file_path)
 
@@ -159,7 +163,7 @@ class DocumentAnalyst:
 
         result = {
             "metadata": {
-                "input_documents": [f for f in os.listdir(input_dir) if f.endswith(".pdf")],
+                "input_documents": document_filenames,
                 "persona": persona,
                 "job_to_be_done": job_to_be_done,
                 "processing_timestamp": datetime.now().isoformat()
@@ -167,16 +171,16 @@ class DocumentAnalyst:
             "extracted_sections": top_sections,
             "subsection_analysis": top_subsection_analysis
         }
+
         return result
 
 
 if __name__ == "__main__":
+    os.makedirs(os.path.dirname(OUTPUT_JSON), exist_ok=True)
     analyst = DocumentAnalyst()
-    result = analyst.process_documents(INPUT_DIR, PERSONA, JOB)
+    result = analyst.process_documents_from_json(INPUT_JSON)
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    output_path = os.path.join(OUTPUT_DIR, "analysis_results.json")
-    with open(output_path, "w", encoding="utf-8") as f:
+    with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
 
-    print(f"\nResults saved to {output_path}")
+    print(f"\n✅ Results saved to: {OUTPUT_JSON}")
