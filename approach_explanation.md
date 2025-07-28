@@ -1,4 +1,3 @@
-```markdown
 # Approach Explanation – Persona-Driven Document Intelligence
 
 ## 1. Overview
@@ -44,8 +43,6 @@ This format allows downstream systems or evaluators to interpret and use the res
 3. Run the Docker container.
 4. The system processes documents and generates `analysis_results.json` in `/app/output`.
 
-This modular approach enables easy extension to new document types, personas, and tasks while meeting the constraints of the hackathon challenge.
-```
 
 ### **Build the Docker image**
 
